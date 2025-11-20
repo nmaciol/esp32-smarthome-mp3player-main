@@ -1,0 +1,20 @@
+
+
+ git remote add origin https://github.com/nmaciol/esp32-smarthome-mp3player-main.git
+ 
+ git branch -M main
+ 
+ git push -u origin main
+ 
+ git config --global user.email "m76013@gmail.com"
+ 
+ git ini
+ 
+ git add .
+ git commit -m "comment out SD-Cart"
+ 
+ git push -u origin main
+ 
+ 
+ 
+ git remote -v
