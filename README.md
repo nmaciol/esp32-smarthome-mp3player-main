@@ -9,7 +9,8 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 - MQTT for Triggering ESP actions
 - FTP-Server use for one connection for upload of MP3-Files and setup of App.ini
 - Queue for sequential playback of TTS and MP3 jobs and to avoid message overlap
-- 
+- The text for the TTS output can be given a prefix (80!Water in the basement) that overrides the volume. This allows important messages to be played back loudly, regardless of the player's current settings, for example: Water in the basement!
+- Each TTS player can subscribe to messages individually or as a group.
 
 # Hardware
 
@@ -62,6 +63,17 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 | [mqtt-house]/ttm    | gong/ttm      | Hallo            | The audio file is cached as an MP3 file. |
 | [mqtt-house]/stop   | gong/stop     | .                |                                          |
 | [mqtt-house]/volume | gong/volume   | 0.8              |                                          |
+
+## Buttons:
+
+| Button               |  Description                              |
+| :------------------ |  ----------------------------------------  |
+| Key3     |          | Stop play                                  |
+| Key4                | Play the test sound                        |
+| Key5                | Volume down                                |
+| Key6                | Volume up                                  |
+
+
 
 ## Origin
 
