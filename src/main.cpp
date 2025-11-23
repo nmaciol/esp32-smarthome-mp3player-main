@@ -21,6 +21,8 @@
 #include <IniFile.h>
 #include <Regexp.h>
 
+
+
 const int chipSelect=PIN_AUDIO_KIT_SD_CARD_CS;
 
 // helper.h
@@ -76,6 +78,9 @@ bool bStartup = false;
 
 String smp3File;
 Str query;
+float PreviousVolume = 0;
+String PreviousLang = TTS_LANG;
+
 
 
 // tts setup Google Query
@@ -106,7 +111,7 @@ void  TTM_Worker(){
     ms.GlobalReplace ("Heizungsraum", "Hzg");    
     ms.GlobalReplace ("Minuten", "M");    
     ms.GlobalReplace ("Waschmaschine", "Wm");    
-    ms.GlobalReplace ("[aeiouöüßä .,?!:]", "");     
+    ms.GlobalReplace ("[aeiouöüßä .,?:]", "");     
     ms.GlobalReplace ("mm", "m");     
     ms.GlobalReplace ("nn", "n");     
     ms.GlobalReplace ("rr", "r");     
@@ -123,7 +128,20 @@ void  TTM_Worker(){
       Serial.print(buf);
       Serial.println(" --- does not exist");
       // url
-      const char* url_str = tts(sTts.c_str());
+
+      if( sTts.substring(2,3).compareTo("!") == 0 )
+      {
+        if(sTts.substring(0,2).toInt() > 5) {
+          PreviousVolume= i2s.getVolume();
+          i2s.setVolume(("0." + sTts.substring(0,2)).toFloat());
+         }  else if(sTts.substring(0,2) == "en" or sTts.substring(0,2) == "pl") {
+          PreviousLang = S_TTS_LANG;
+          S_TTS_LANG =  sTts.substring(0,2);
+        }
+        sTts = sTts.substring(3);
+      } 
+
+      const char* url_str = tts(sTts.c_str(), S_TTS_LANG.c_str(), S_TTS_SPEED.c_str());
       Serial.println("URL Query -- " + String(url_str));
       // generate mp3 with the help of google translate
       url.begin(url_str ,"audio/mp3");
@@ -445,6 +463,17 @@ void setup(){
 
 void loop(){
 
+  if ( !copierMP3.copy() and !copierTTS.copy() and !copierTTM.copy())  {
+    if(PreviousVolume > 0){
+      i2s.setVolume(PreviousVolume);
+      PreviousVolume =0;
+    }
+    if(PreviousLang.length() > 0){
+      S_TTS_LANG = PreviousLang;
+      PreviousLang = "";
+    }
+  } 
+
   // MP3 Player
   if (!copierMP3.copy()) {
     bActiveMP3 = false;
@@ -489,6 +518,20 @@ void loop(){
         //MP3
         bActiveMP3 = true;
         smp3File = queueMp3.pop();
+        int p = 1 + smp3File.lastIndexOf('/');
+      
+        if( smp3File.substring(p+2,p+3 ).compareTo("!") == 0 )
+        {
+          if(smp3File.substring(p,p + 2).toInt() > 5) {
+            PreviousVolume= i2s.getVolume();
+            i2s.setVolume(("0." + smp3File.substring(p,p + 2)).toFloat());
+          }
+          Serial.println("Prefix -- " + smp3File.substring(p,p + 2));
+        }
+
+
+        
+
         Serial.println("Loop Sound started -- " + smp3File);
         SD.begin(chipSelect);
         audioFile = SD.open(smp3File);
@@ -510,9 +553,22 @@ void loop(){
         bActiveTTS = true;
         String sTts;
         sTts = queueTTS.pop().substring(0, 239);
-        Serial.println("TTS " + sTts);
-        const char* url_str = tts(sTts.c_str());
 
+        Serial.println("TTS------>>" + sTts.substring(2,3));
+        if( sTts.substring(2,3).compareTo("!") == 0 )
+        {
+          if(sTts.substring(0,2).toInt() > 5) {
+            PreviousVolume= i2s.getVolume();
+            i2s.setVolume(("0." + sTts.substring(0,2)).toFloat());
+           }  else if(sTts.substring(0,2) == "en" or sTts.substring(0,2) == "pl") {
+            PreviousLang = S_TTS_LANG;
+            S_TTS_LANG =  sTts.substring(0,2);
+          }
+          sTts = sTts.substring(3);
+        }        
+        
+        Serial.println("TTS " + sTts);
+        const char* url_str = tts(sTts.c_str(), S_TTS_LANG.c_str(), S_TTS_SPEED.c_str());
         // generate mp3 with the help of google tts
         decoder.begin();
         url.begin(url_str ,"audio/mp3");

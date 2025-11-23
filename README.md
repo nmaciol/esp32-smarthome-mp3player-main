@@ -9,19 +9,19 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 - MQTT for Triggering ESP actions
 - FTP-Server use for one connection for upload of MP3-Files and setup of App.ini
 - Queue for sequential playback of TTS and MP3 jobs and to avoid message overlap
--
+- 
 
 # Hardware
 
 - ESP32-Audio-Kit ESP32-A1S 4 MB oder 8 MB for 15-17€ on Aliexpress.
--  [![1763652821688](images/README/1763652821688.png)](https://)
+- ![1763652821688|](images/README/1763652821688.png )
 
 # Installation & Customizing
 
 - Modify app.ini on the SD card
 - Upload the project to VS Code
 - Build firmware with PlatformIO and upload it to ESP32-A1S
--
+- 
 
 # Known issues
 
@@ -42,13 +42,11 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 
 ## MQTT Command Topics:
 
-
 | Topic            | Value | Responds                                      | Description               |
 | :--------------- | :---- | --------------------------------------------- | ------------------------- |
 | [host-name]/ping | .     | MP3 player responds with [host-name]/FreeHeap | Use this to get FreeHeap. |
 
 ## MP3/TTS Player Topics:
-
 
 | Topic               | Topic example | value            | Description                              |
 | :------------------ | ------------- | ---------------- | ---------------------------------------- |
@@ -68,3 +66,4 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 ## Origin
 
 [https://github.com/pschatzmann/arduino-audio-tools](https://)
+
