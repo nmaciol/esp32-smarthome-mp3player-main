@@ -66,6 +66,17 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 | [mqtt-house]/stop   | gong/stop     | .                |                                          |
 | [mqtt-house]/volume | gong/volume   | 0.8              |                                          |
 
+## Buttons:
+
+| Button               |  Description                              |
+| :------------------ |  ----------------------------------------  |
+| Key3     |          | Stop play                                  |
+| Key4                | Play the test sound                        |
+| Key5                | Volume down                                |
+| Key6                | Volume up                                  |
+
+
+
 ## Origin
 
 [https://github.com/pschatzmann/arduino-audio-tools](https://)
