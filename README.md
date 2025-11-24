@@ -17,12 +17,20 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 - ESP32-Audio-Kit ESP32-A1S 4 MB oder 8 MB for 15-17€ on Aliexpress.
 - ![1763652821688|](images/README/1763652821688.png )
 
-# Installation & Customizing
+# SW Installation & Customizing
 
 - Modify app.ini on the SD card
 - Upload the project to VS Code
 - Build firmware with PlatformIO and upload it to ESP32-A1S
-- 
+
+# HW Installation #
+
+- The power supply can be provided using a standard phone charger connected to the USB power port on the ESP32 board.
+- For the speaker connection or for powering the board from a battery, you will need an XH-2.5 / 2.54 mm connector with a 20 cm cable.
+- The board can be installed either inside a standard 100 × 100 mm electrical junction box from a hardware store or in a custom enclosure printed with a 3D printer.
+- A quick way to test the board is by using the MyMQTT app on your smartphone.
+- Warning! If you want to power the board with a battery, please note that the battery input requires 3.3 V. Make sure to read the documentation carefully before using the board in this configuration.
+- You can connect passive speakers with 4 or 8 ohms to the board. These speakers can be purchased on eBay, or you can repurpose small speakers from an old stereo system or PC.
 
 # Known issues
 
@@ -76,6 +84,8 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 
 
 ## Origin
+
+The development is based on the work of Phil Schatzmann. I also used various libraries from different authors to implement my vision of the smart home MP3/TTS player.
 
 [https://github.com/pschatzmann/arduino-audio-tools](https://)
 
