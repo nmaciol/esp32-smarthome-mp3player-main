@@ -59,15 +59,16 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 
 | Topic               | Topic example | value            | Description                              |
 | :------------------ | ------------- | ---------------- | ---------------------------------------- |
-| [host-name]/mp3     | gong-q/mp3    | /mp3/gong-a.mp3  |                                          |
+| [host-name]/mp3     | gong-q/mp3    | /mp3/gong-a.mp3  | Only [host-name] player are playing     |
 | [host-name]/tts     | gong-q/tts    | Hallo Mp3-Player |                                          |
 | [host-name]/ttm     | gong-q/ttm    | Hallo Mp3-Player | The audio file is cached as an MP3 file. |
 | [host-name]/stop    | gong-q/stop   | .                |                                          |
 | [host-name]/volume  | gong-q/volume | 0.8              | max. Value 1                             |
 | [host-name]/reboot  | gong-q/reboot | .                |                                          |
 | [host-name]/speed   | gong-q/speed  | .                | Applies only to TTS and new TTM files    |
-| [mqtt-house]/mp3    | gong/mp3      | /mp3/gong-a.mp3  |                                          |
+| [mqtt-house]/mp3    | gong/mp3      | /mp3/gong-a.mp3  | Play all players from the group [mqtt-house]   |
 | [mqtt-house]/tts    | gong/tts      | Hallo            |                                          |
+| [mqtt-house]/tts    | gong/tts      | 80!Hallo         | at 80% volume, Hallo                                         |
 | [mqtt-house]/ttm    | gong/ttm      | Hallo            | The audio file is cached as an MP3 file. |
 | [mqtt-house]/stop   | gong/stop     | .                |                                          |
 | [mqtt-house]/volume | gong/volume   | 0.8              |                                          |
@@ -76,7 +77,7 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 
 | Button               |  Description                              |
 | :------------------ |  ----------------------------------------  |
-| Key3     |          | Stop play                                  |
+| Key3                | Stop play                                  |
 | Key4                | Play the test sound                        |
 | Key5                | Volume down                                |
 | Key6                | Volume up                                  |
@@ -85,7 +86,7 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 
 ## Origin
 
-The development is based on the work of Phil Schatzmann. I also used various libraries from different authors to implement my vision of the smart home MP3/TTS player.
+The development is based on the work of Phil Schatzmann. I also used various libraries from different authors to realize my vision of an intelligent MP3/TTS player for smart home use.
 
 [https://github.com/pschatzmann/arduino-audio-tools](https://)
 
