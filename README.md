@@ -23,7 +23,8 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 - Upload the project to VS Code
 - Build firmware with PlatformIO and upload it to ESP32-A1S
 
-# HW Installation #
+
+# HW Installation
 
 - The power supply can be provided using a standard phone charger connected to the USB power port on the ESP32 board.
 - For the speaker connection or for powering the board from a battery, you will need an XH-2.5 / 2.54 mm connector with a 20 cm cable.
@@ -62,6 +63,7 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 | [host-name]/mp3     | gong-q/mp3    | /mp3/gong-a.mp3  | Only [host-name] player are playing     |
 | [host-name]/tts     | gong-q/tts    | Hallo Mp3-Player |                                          |
 | [host-name]/ttm     | gong-q/ttm    | Hallo Mp3-Player | The audio file is cached as an MP3 file. |
+| [host-name]/ttm     | gong-q/delttm    | Hallo Mp3-Player | The audio file has been deleted from the cache. |
 | [host-name]/stop    | gong-q/stop   | .                |                                          |
 | [host-name]/volume  | gong-q/volume | 0.8              | max. Value 1                             |
 | [host-name]/reboot  | gong-q/reboot | .                |                                          |
@@ -82,11 +84,15 @@ The aim of this project is to develop an MP3 and TTS player that can be used for
 | Key5                | Volume down                                |
 | Key6                | Volume up                                  |
 
-
-
 ## Origin
 
 The development is based on the work of Phil Schatzmann. I also used various libraries from different authors to realize my vision of an intelligent MP3/TTS player for smart home use.
 
 [https://github.com/pschatzmann/arduino-audio-tools](https://)
+[https://github.com/greiman/SdFat.git](https://)
+[https://github.com/knolleary/pubsubclient.git](https://)
+[https://github.com/xreef/SimpleFTPServer.git](https://)
+[https://github.com/georg-koch/Arduino-QueueList.git](https://)
+[https://github.com/stevemarple/IniFile.git](https://)
+[https://github.com/nickgammon/Regexp.git](https://)
 

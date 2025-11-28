@@ -5,7 +5,6 @@
  * https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-tts/streams-google-audiokit/streams-google-audiokit.ino
  * 
  */
-
  
 #include <SD.h>
 #include "AudioTools.h"
@@ -15,18 +14,29 @@
 #include "AudioTools/Communication/AudioHttp.h"
 #include <WiFi.h>
 #include <SimpleFTPServer.h>
+
+#undef DEFAULT_STORAGE_TYPE_ESP32
+#define DEFAULT_STORAGE_TYPE_ESP32 STORAGE_SD
+
 #include <PubSubClient.h>
+
 #include <QueueList.h>
 #include <credentials.h>
 #include <IniFile.h>
 #include <Regexp.h>
 
+#define FIRMWARE_VERSION "0.1.0"
 
+int chipSelect=PIN_AUDIO_KIT_SD_CARD_CS;
 
-const int chipSelect=PIN_AUDIO_KIT_SD_CARD_CS;
+// !!!!! Overwrite value in  .pio\libdeps\esp32dev\SimpleFTPServer\FtpServerKey.h
+/// Line 63 #define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_SD
+	
+
 
 // helper.h
-void printAppIniErrorMessage(uint8_t e, bool eol = true);
+void getTtmFileName(String text,  char* buf);
+void setGlobalVar();
 
 // Declare variables for setting up WLAN, FTP, MQQTT, TTS, etc. 
 String S_HOST_NAME = HOST_NAME;
@@ -51,9 +61,7 @@ String S_TTS_SPEED = TTS_SPEED;
 String S_TTS_MAX_LEN_TTM = TTS_MAX_LEN_TTM;
 
 // create a queue of strings messages.
-QueueList <String> queueMp3;
-QueueList <String> queueTTM;
-QueueList <String> queueTTS;
+QueueList <String> queueOrder;
 
 // WiFi + MQTT + FTP
 WiFiClient net;
@@ -61,6 +69,7 @@ URLStream url;
 PubSubClient mqttClient(net);
 FtpServer   ftpServer;  
 File file; // final output stream
+
 
 AudioBoardStream i2s(AudioKitEs8388V1);
 EncodedAudioStream decoder(&i2s, new MP3DecoderHelix()); // Decoding stream
@@ -71,17 +80,14 @@ StreamCopy copierTTS; //  Text to speech
 
 File audioFile;
 
-bool bActiveMP3 = false;
-bool bActiveTTM = false;
-bool bActiveTTS = false;
 bool bStartup = false;
+bool bCopierActive = false;
 
-String smp3File;
+String order;
 Str query;
 float PreviousVolume = 0;
 String PreviousLang = TTS_LANG;
-
-
+String TempVolume = "";
 
 // tts setup Google Query
 const char* tts(const char* text, const char* lang="de-DE", const char* speed="0.7"){  
@@ -94,30 +100,12 @@ const char* tts(const char* text, const char* lang="de-DE", const char* speed="0
   return query.c_str();
 }
 
-
 // TTM-Worker
-void  TTM_Worker(){
+void  TTM_Worker_Google(String sTts){
 
-  char buf [240];
-  String sTts;
-  MatchState ms (buf);
-  if (!queueTTM.isEmpty() )
-  {
-    sTts = queueTTM.pop().substring(0, 239);
+    char buf [240];
     Serial.println("TTM " + sTts);
-    strcpy (buf, sTts.c_str());
-    ms.Target (buf);    // recompute length
-    // replace vowels with *
-    ms.GlobalReplace ("Heizungsraum", "Hzg");    
-    ms.GlobalReplace ("Minuten", "M");    
-    ms.GlobalReplace ("Waschmaschine", "Wm");    
-    ms.GlobalReplace ("[aeiouöüßä .,?:]", "");     
-    ms.GlobalReplace ("mm", "m");     
-    ms.GlobalReplace ("nn", "n");     
-    ms.GlobalReplace ("rr", "r");     
-    ms.GlobalReplace ("ff", "f");      
-    ms.GlobalReplace ("ll", "l");      
-
+    getTtmFileName(sTts,  buf);
     // show results
     Serial.print ("Converted string: ");
     Serial.println (buf);
@@ -127,20 +115,7 @@ void  TTM_Worker(){
       Serial.print("File  --- ");
       Serial.print(buf);
       Serial.println(" --- does not exist");
-      // url
-
-      if( sTts.substring(2,3).compareTo("!") == 0 )
-      {
-        if(sTts.substring(0,2).toInt() > 5) {
-          PreviousVolume= i2s.getVolume();
-          i2s.setVolume(("0." + sTts.substring(0,2)).toFloat());
-         }  else if(sTts.substring(0,2) == "en" or sTts.substring(0,2) == "pl") {
-          PreviousLang = S_TTS_LANG;
-          S_TTS_LANG =  sTts.substring(0,2);
-        }
-        sTts = sTts.substring(3);
-      } 
-
+      // url 
       const char* url_str = tts(sTts.c_str(), S_TTS_LANG.c_str(), S_TTS_SPEED.c_str());
       Serial.println("URL Query -- " + String(url_str));
       // generate mp3 with the help of google translate
@@ -156,12 +131,14 @@ void  TTM_Worker(){
       file.close();
       url.clear();
       url.end();
-   } 
+    } 
+    Serial.println("TTM Push Queue MP3  " + String(PreviousVolume));
+    if(PreviousVolume > 0.01){
+      queueOrder.push("mp3" +  TempVolume + "!/tts-mp3//" + String(buf) + ".mp3");
+    } else {
+      queueOrder.push("mp3/tts-mp3//" +  String(buf) + ".mp3");
 
-    delay(500);
-    Serial.println("TTM Push Queue MP3");
-    queueMp3.push("/tts-mp3//" + String(buf) + ".mp3");
-  }
+    }
 }
 
 // Button 3
@@ -175,7 +152,7 @@ void stopPlaySound(bool, int, void *)
 void playTestSound(bool, int, void *)
 {
   Serial.println("Sound started--Key");
-  queueMp3.push(S_START_SOUND);  
+  queueOrder.push("mp3" + S_START_SOUND);  
 }
 // Button 5
 void audioVolumeDown (bool, int, void *)
@@ -187,6 +164,7 @@ void audioVolumeUp (bool, int, void *)
 { 
   i2s.incrementVolume(0.05);
 };
+
 
 //MQTT Callback
 void mqttCallback(char* topic, byte* message, unsigned int length) {
@@ -204,7 +182,7 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
   // Execute MQTT-command
   if (String(topic) == S_HOST_NAME + "/mp3" or  String(topic) ==  S_MQTT_HOUSE + "/mp3") {
       Serial.print("MP3 starting  -- ");
-      queueMp3.push(messageTemp);        
+      queueOrder.push("mp3" + messageTemp);        
   } else if (String(topic) ==  S_HOST_NAME + "/volume" or  String(topic) ==  S_MQTT_HOUSE + "/volume") {
       Serial.println("Setting Volume");
       i2s.setVolume((float)messageTemp.toFloat());
@@ -214,13 +192,29 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
       decoder.end();
       //ESP.restart();
   } else if (String(topic) ==  S_HOST_NAME + "/tts" or  String(topic) == S_MQTT_HOUSE + "/tts") {
-      queueTTS.push(messageTemp);
+      queueOrder.push("tts" + messageTemp);
   } else if (String(topic) ==  S_HOST_NAME + "/ttm" or  String(topic) == S_MQTT_HOUSE + "/ttm") {
       Serial.print("TTM starting  -- ");
       if(messageTemp.length() > S_TTS_MAX_LEN_TTM.toInt()){
-           queueTTS.push(messageTemp);
+          queueOrder.push("tts" +messageTemp);
+      } else {
+          queueOrder.push("ttm" +messageTemp);
+      }
+  } else if (String(topic) ==  S_HOST_NAME + "/delttm" ) {
+        char buf [240];        
+        getTtmFileName(messageTemp, buf);
+        // show results
+        SD.begin(chipSelect);
+            
+        String filename = "/tts-mp3/" + String(buf) + ".mp3";
+        SD.begin(chipSelect);
+        if (SD.remove(filename)) {
+          Serial.print("File ");
+          Serial.print(filename);
+          Serial.println(" deleted successfully.");
         } else {
-            queueTTM.push(messageTemp);
+          Serial.print("Failed to delete file ");
+          Serial.println(filename);
         }
   } else if (String(topic) ==  S_HOST_NAME + "/speed" or  String(topic) == S_MQTT_HOUSE + "/speed") {
       S_TTS_SPEED =  messageTemp;
@@ -229,7 +223,8 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
       char buffer[12];
       sprintf(buffer, "%u" , number);
       Serial.println("Connection test Ping");  
-      mqttClient.publish((S_HOST_NAME + "/FreeHeep").c_str(), buffer,12);
+      mqttClient.publish((S_HOST_NAME + "/FreeHeap").c_str(), ( String(buffer)).c_str(),24);
+      mqttClient.publish((S_HOST_NAME + "/version").c_str(), FIRMWARE_VERSION,24);
   } else if (String(topic) == S_HOST_NAME + "/reboot") {
       Serial.println("Reboot");
       i2s.end();
@@ -240,7 +235,6 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
   }
 }
 
-
 // MQTT reconnect
 void mqttReconnect() {
     // Loop until we're reconnected
@@ -249,27 +243,30 @@ void mqttReconnect() {
     if (mqttClient.connect((S_HOST_NAME + "--mp3Player").c_str(), S_MQTT_USER.c_str(), S_MQTT_PASSWORD.c_str())) {
         
         Serial.println("connected");
+        // Host
         mqttClient.subscribe((S_HOST_NAME + "/mp3").c_str());
         mqttClient.subscribe((S_HOST_NAME + "/reboot").c_str());
         mqttClient.subscribe((S_HOST_NAME + "/volume").c_str());
         mqttClient.subscribe((S_HOST_NAME + "/stop").c_str());
         mqttClient.subscribe((S_HOST_NAME + "/tts").c_str());
         mqttClient.subscribe((S_HOST_NAME + "/ttm").c_str());
+        mqttClient.subscribe((S_HOST_NAME + "/delttm").c_str());
         mqttClient.subscribe((S_HOST_NAME + "/ping").c_str());
         mqttClient.subscribe((S_HOST_NAME + "/speed").c_str());
+
+        // House
         mqttClient.subscribe((S_MQTT_HOUSE + "/tts").c_str());
         mqttClient.subscribe((S_MQTT_HOUSE + "/ttm").c_str());
         mqttClient.subscribe((S_MQTT_HOUSE + "/volume").c_str());
         mqttClient.subscribe((S_MQTT_HOUSE + "/stop").c_str());
         mqttClient.subscribe((S_MQTT_HOUSE + "/mp3").c_str());
         mqttClient.subscribe((S_MQTT_HOUSE + "/speed").c_str());
-
+        // Startup
         delay (100);
         if(bStartup){
-          mqttClient.publish((S_HOST_NAME + "/IP").c_str(),WiFi.localIP().toString().c_str());
+          mqttClient.publish((S_HOST_NAME + "/IP").c_str(),(S_HOST_NAME + " - " + WiFi.localIP().toString()).c_str());
           bStartup=false;
         }
-  
     } else {
         Serial.print("failed, rc=");
         Serial.print(mqttClient.state());
@@ -293,130 +290,8 @@ void setup(){
     stop();
   }
 
-  // --------------  app.ini ------------------
-  SD.begin(chipSelect);
-  // App.ini
-  const size_t bufferLen = 180;
-  char buffer[bufferLen];
-  const char *filename = "/app.ini";
-
-  IniFile ini(filename);
-  if (!ini.open()) {
-    Serial.print("ERROR - Ini file ");
-    Serial.print(filename);
-    Serial.println(" does not exist");
-  
-  } else {
-    Serial.print("SUCCESS - Found ");
-    Serial.print(filename);
-    Serial.println(" file.");
-
-    // Check the file is valid. This can be used to warn if any lines
-    // are longer than the buffer.
-    if (!ini.validate(buffer, bufferLen)) {
-      Serial.print("ini file ");
-      Serial.print(ini.getFilename());
-      Serial.print(" not valid: ");
-      printAppIniErrorMessage(ini.getError());
-    } else {
-    
-      if (ini.getValue("main", "host-name", buffer, bufferLen)) {
-        Serial.print("section 'main' has an entry 'host' with value ");
-        Serial.println(buffer);
-        S_HOST_NAME = buffer;
-      }
-
-      if (ini.getValue("main", "audio-volume", buffer, bufferLen)) {
-        Serial.print("section 'main' has an entry 'audio-volume' with value ");
-        Serial.println(buffer);
-        S_AUDIO_VOLUME = buffer;
-      }
-
-      if (ini.getValue("main", "start-sound", buffer, bufferLen)) {
-        Serial.print("section 'main' has an entry 'start-sound' with value ");
-        Serial.println(buffer);
-        S_START_SOUND = buffer;
-      }
-
-      if (ini.getValue("wifi", "ssid", buffer, bufferLen)) {
-        Serial.print("section 'wifi' has an entry 'ssid' with value ");
-        Serial.println(buffer);
-        S_WIFI_SSID = buffer;
-      }
-
-      if (ini.getValue("wifi", "password", buffer, bufferLen)) {
-        Serial.print("section 'wifi' has an entry 'password' with value ");
-        Serial.println(buffer);
-        S_WIFI_PASSWORD = buffer;
-      }
-
-
-      if (ini.getValue("mqtt", "server", buffer, bufferLen)) {
-        Serial.print("section 'mqtt' has an entry 'Server' with value ");
-        Serial.println(buffer);
-        S_MQTT_SERVER = buffer;
-      }
-      if (ini.getValue("mqtt", "port", buffer, bufferLen)) {
-        Serial.print("section 'mqtt' has an entry 'Port' with value ");
-        Serial.println(buffer);
-        S_MQTT_PORT = buffer;
-      }
-      if (ini.getValue("mqtt", "user", buffer, bufferLen)) {
-        Serial.print("section 'mqtt' has an entry 'user' with value ");
-        Serial.println(buffer);
-        S_MQTT_USER = buffer;
-      }
-
-      if (ini.getValue("mqtt", "password", buffer, bufferLen)) {
-        Serial.print("section 'mqtt' has an entry 'password' with value ");
-        Serial.println(buffer);
-        S_MQTT_PASSWORD = buffer;
-      }
-      if (ini.getValue("mqtt", "mqtt-house", buffer, bufferLen)) {
-        Serial.print("section 'mqtt' has an entry 'House' with value ");
-        Serial.println(buffer);
-        S_MQTT_HOUSE = buffer;
-      }
-
-      if (ini.getValue("ftp", "user", buffer, bufferLen)) {
-        Serial.print("section 'ftp' has an entry 'user' with value ");
-        Serial.println(buffer);
-        S_FTP_SVR_USER = buffer;
-      }
-
-      if (ini.getValue("ftp", "password", buffer, bufferLen)) {
-        Serial.print("section 'ftp' has an entry 'password' with value ");
-        Serial.println(buffer);
-        S_FTP_SVR_PASSWORD = buffer;
-      }
-
-      if (ini.getValue("tts", "qry-google", buffer, bufferLen)) {
-        Serial.print("section 'tts' has an entry 'Qry Google' with value ");
-        Serial.println(buffer);
-        S_TTS_QRY_GOOGLE = buffer;
-      }
-
-      if (ini.getValue("tts", "lang", buffer, bufferLen)) {
-        Serial.print("section 'tts' has an entry 'Lang' with value ");
-        Serial.println(buffer);
-        S_TTS_LANG = buffer;
-      }
-
-      if (ini.getValue("tts", "spped", buffer, bufferLen)) {
-        Serial.print("section 'tts' has an entry 'Speed' with value ");
-        Serial.println(buffer);
-        S_TTS_SPEED = buffer;
-      }
-      if (ini.getValue("tts", "max-len-ttm", buffer, bufferLen)) {
-        Serial.print("section 'tts' has an entry 'Max-len-TTM' with value ");
-        Serial.println(buffer);
-        S_TTS_MAX_LEN_TTM = buffer;
-      }
-
-    }
-  }
-
-
+  // Overwrite globVar with AppIni values
+  setGlobalVar();
   i2s.setVolume(S_AUDIO_VOLUME.toFloat());
   // setup additional buttons
   i2s.addDefaultActions();
@@ -453,10 +328,9 @@ void setup(){
   // Start FTP server with username and password
   ftpServer.begin(S_FTP_SVR_USER.c_str(), S_FTP_SVR_PASSWORD.c_str()); 
   Serial.println("FTP server started!");
-
-  //  --- 
+  //
   delay(10);
-  queueMp3.push(S_START_SOUND);
+  queueOrder.push("mp3" + S_START_SOUND);
   bStartup= true;
 }
 
@@ -467,33 +341,15 @@ void loop(){
     if(PreviousVolume > 0){
       i2s.setVolume(PreviousVolume);
       PreviousVolume =0;
+      TempVolume="";
     }
     if(PreviousLang.length() > 0){
       S_TTS_LANG = PreviousLang;
       PreviousLang = "";
     }
-  } 
-
-  // MP3 Player
-  if (!copierMP3.copy()) {
-    bActiveMP3 = false;
+    bCopierActive = false;
   } else {
-    bActiveMP3 = true;
-  }
- 
-  // Text to MP3
-  if (!copierTTM.copy()) {
-     bActiveTTM = false;
-  } else {
-     bActiveTTM = true;
-  }
-
-  // Text to Speech
-  if (!copierTTS.copy()) {
-    bActiveTTS = false;
-   
-  } else {
-    bActiveTTS = true;
+    bCopierActive = true;
   }
 
   // MQTT Reconnect when the connection is lost
@@ -510,73 +366,57 @@ void loop(){
   // Handle FTP server operations
   ftpServer.handleFTP(); // Continuously process FTP requests
 
-
   // Check out queues and work items
-  if (!bActiveTTS and !bActiveTTM and !bActiveMP3  )  {
+  if (!bCopierActive  )  {
 
-    if(!queueMp3.isEmpty()){
-        //MP3
-        bActiveMP3 = true;
-        smp3File = queueMp3.pop();
-        int p = 1 + smp3File.lastIndexOf('/');
-      
-        if( smp3File.substring(p+2,p+3 ).compareTo("!") == 0 )
+    if(!queueOrder.isEmpty()){
+        bCopierActive = true;
+        String order = queueOrder.pop();
+        String orderTyp = order.substring(0,3);
+        String orderText = order.substring(3);
+
+        if( orderText.substring(2,3 ).compareTo("!") == 0 )
         {
-          if(smp3File.substring(p,p + 2).toInt() > 5) {
+          if(orderText.substring(0, 2).toInt() > 3) {
             PreviousVolume= i2s.getVolume();
-            i2s.setVolume(("0." + smp3File.substring(p,p + 2)).toFloat());
-          }
-          Serial.println("Prefix -- " + smp3File.substring(p,p + 2));
-        }
-
-
-        
-
-        Serial.println("Loop Sound started -- " + smp3File);
-        SD.begin(chipSelect);
-        audioFile = SD.open(smp3File);
-        if(audioFile){
-          decoder.begin();
-          copierMP3.begin(decoder, audioFile);
-          copierMP3.copy();
-        } else {
-          Serial.println("File open failed -- " + smp3File );
-        }
-        
-    } else if (!queueTTM.isEmpty()) {
-        //TTM
-        bActiveTTM = true;
-        TTM_Worker();
-      
-    } else if (!queueTTS.isEmpty()) {
-        //TTS
-        bActiveTTS = true;
-        String sTts;
-        sTts = queueTTS.pop().substring(0, 239);
-
-        Serial.println("TTS------>>" + sTts.substring(2,3));
-        if( sTts.substring(2,3).compareTo("!") == 0 )
-        {
-          if(sTts.substring(0,2).toInt() > 5) {
-            PreviousVolume= i2s.getVolume();
-            i2s.setVolume(("0." + sTts.substring(0,2)).toFloat());
-           }  else if(sTts.substring(0,2) == "en" or sTts.substring(0,2) == "pl") {
+            TempVolume=orderText.substring(0, 2);
+            i2s.setVolume(("0." + TempVolume).toFloat());
+            Serial.println("New volume -- " + String(i2s.getVolume()));
+          }  else if(orderText.substring(0,2) == "en" or orderText.substring(0,2) == "pl") {
             PreviousLang = S_TTS_LANG;
-            S_TTS_LANG =  sTts.substring(0,2);
+            S_TTS_LANG =  orderText.substring(0,2);
           }
-          sTts = sTts.substring(3);
-        }        
-        
-        Serial.println("TTS " + sTts);
-        const char* url_str = tts(sTts.c_str(), S_TTS_LANG.c_str(), S_TTS_SPEED.c_str());
-        // generate mp3 with the help of google tts
-        decoder.begin();
-        url.begin(url_str ,"audio/mp3");
-        Serial.println("TTS Url: " + String(url_str));
-        copierTTS.begin(decoder, url);
-        copierTTS.copyAll();
-        url.clear();
-        url.end();
+          Serial.println("Prefix -- " + orderText.substring(0, 2));
+          orderText =  orderText.substring(3);
+        }
+
+        if(orderTyp == "mp3"){
+          Serial.println("Loop Sound started -- " + orderText);
+          SD.begin(chipSelect);
+          audioFile = SD.open(orderText);
+          if(audioFile){
+            decoder.begin();
+            copierMP3.begin(decoder, audioFile);
+            copierMP3.copy();
+          } else {
+            Serial.println("File open failed -- " + orderText );
+          }
+        } else if (orderTyp == "ttm") {
+
+          TTM_Worker_Google( orderText);
+
+        } else if (orderTyp == "tts") {
+          Serial.println("TTS " + orderText);
+          const char* url_str = tts(orderText.c_str(), S_TTS_LANG.c_str(), S_TTS_SPEED.c_str());
+          // generate mp3 with the help of google tts
+          decoder.begin();
+          url.begin(url_str ,"audio/mp3");
+          Serial.println("TTS Url: " + String(url_str));
+          copierTTS.begin(decoder, url);
+          copierTTS.copyAll();
+          url.clear();
+          url.end();
+        }
     }
   }
 }
