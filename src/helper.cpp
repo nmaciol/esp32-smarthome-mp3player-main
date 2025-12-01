@@ -3,6 +3,7 @@
 
 
 
+#include <Arduino.h>
 #include <cstdint>
 #include <IniFile.h>
 #include <Regexp.h>
@@ -12,6 +13,7 @@
 void printAppIniErrorMessage(uint8_t e);
 
 extern  int chipSelect;
+
 
 extern String S_HOST_NAME;
 extern String S_AUDIO_VOLUME;
@@ -35,8 +37,9 @@ extern String S_TTS_SPEED;
 extern String S_TTS_MAX_LEN_TTM;
 
 // Overwrite globVar with AppIni values
-void setGlobalVar(){
-
+bool setGlobalVar(){
+  
+    Serial.println(" ------  Start set global params ------------");
     // --------------  app.ini ------------------
     SD.begin(chipSelect);
     // App.ini
@@ -49,6 +52,7 @@ void setGlobalVar(){
       Serial.print("ERROR - Ini file ");
       Serial.print(filename);
       Serial.println(" does not exist");
+      return(false);
     
     } else {
       Serial.print("SUCCESS - Found ");
@@ -62,6 +66,7 @@ void setGlobalVar(){
         Serial.print(ini.getFilename());
         Serial.print(" not valid: ");
         printAppIniErrorMessage(ini.getError());
+        return(false);
       } else {
       
         if (ini.getValue("main", "host-name", buffer, bufferLen)) {
@@ -158,7 +163,8 @@ void setGlobalVar(){
         }
 
       }
-    }
+    } 
+    return(true);
   }
 
 
