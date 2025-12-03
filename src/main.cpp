@@ -15,11 +15,12 @@
 #include <WiFi.h>
 #include <SimpleFTPServer.h>
 
-//#undef DEFAULT_STORAGE_TYPE_ESP32
-//#define DEFAULT_STORAGE_TYPE_ESP32 STORAGE_SD
-
 // !!!!! Overwrite value in  .pio\libdeps\esp32dev\SimpleFTPServer\FtpServerKey.h
 /// Line 63 #define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_SD
+
+#undef DEFAULT_STORAGE_TYPE_ESP32
+#define DEFAULT_STORAGE_TYPE_ESP32 STORAGE_SD
+
 
 
 
@@ -152,6 +153,9 @@ void stopPlaySound(bool, int, void *)
   //Serial.println("Stop Play Sound");
   currentLiveStream="";
   decoder.end();
+  url.flush();
+  url.end();
+  url.clear();
   copier.end();
 }
 // Button 4
@@ -198,6 +202,10 @@ void mqttCallback(char* topic, byte* message, unsigned int length) {
       currentLiveStream = "";
       i2s.setMute(true);
       decoder.end();
+      url.flush();
+      url.end();
+      url.clear();
+      //i2s.end();
       copier.end();
       delay(100);
       i2s.setMute(false);
@@ -369,10 +377,12 @@ void setup(){
   Serial.println("+-------------------------------------------+");
 
   Serial.println(" Host-Name : " + S_HOST_NAME);
+  Serial.println(" House : " + S_MQTT_HOUSE);
   Serial.println(" WiFi SSID : " + S_WIFI_SSID);
   Serial.println(" MQTT SRV : " + S_MQTT_SERVER);
   Serial.println(" ");
   Serial.println(" IP : " + WiFi.localIP().toString());
+  Serial.println(" ");
 
 }
 
@@ -399,22 +409,15 @@ void loop(){
     //Serial.println("Stop LS");
     decoder.end();
     delay (100);
+    url.flush();
+    url.end();
+    url.clear();
     copier.end();
     bLiveStreamPause=true;
   }
 
   // Check out queues and work items
-  if (!copier.copy())  {
-    if(PreviousVolume > 0){
-      i2s.setVolume(PreviousVolume);
-      PreviousVolume =0;
-      TempVolume="";
-    }
-    if(PreviousLang.length() > 0){
-      S_TTS_LANG = PreviousLang;
-      PreviousLang = "";
-    }
-
+  if (!copier.copy()  or copier.copy() == 0)  {
     // Start Live Stream
     if(currentLiveStream.length() > 0  and queueOrder.isEmpty()){
       //Serial.println("Start LS");
@@ -431,6 +434,7 @@ void loop(){
         }
         
       }
+      // LV-Stream
       decoder.begin();
       if(!url.begin(currentLiveStream.c_str(),"audio/mp3")){
         currentLiveStream = "";
@@ -445,58 +449,73 @@ void loop(){
       
     }
 
-    if(!queueOrder.isEmpty()){
-        String  order = queueOrder.pop();
-        //Serial.println ("Loop - " + order);
-        String orderTyp = order.substring(0,3);
-        String orderText = order.substring(3);
-        // Prefix Volume control
-        if( orderText.substring(2,3 ).compareTo("!") == 0 )
-        {
-          if(orderText.substring(0, 2).toInt() > 3) {
-            if(PreviousVolume == 0){
-              PreviousVolume= i2s.getVolume();
+    // MP3 TTS TTM
+    if(!copier.copy()){
+
+      if(PreviousVolume > 0){
+        i2s.setVolume(PreviousVolume);
+        PreviousVolume =0;
+        TempVolume="";
+      }
+      if(PreviousLang.length() > 0){
+        S_TTS_LANG = PreviousLang;
+        PreviousLang = "";
+      }
+
+
+      if(!queueOrder.isEmpty()){
+          String  order = queueOrder.pop();
+          //Serial.println ("Loop - " + order);
+          String orderTyp = order.substring(0,3);
+          String orderText = order.substring(3);
+          // Prefix Volume control
+          if( orderText.substring(2,3 ).compareTo("!") == 0 )
+          {
+            if(orderText.substring(0, 2).toInt() > 3) {
+              if(PreviousVolume == 0){
+                PreviousVolume= i2s.getVolume();
+              }
+              TempVolume=orderText.substring(0, 2);
+              i2s.setVolume(("0." + TempVolume).toFloat());
+              //Serial.println("New volume -- " + String(i2s.getVolume()));
+            }  else if(orderText.substring(0,2) == "en" or orderText.substring(0,2) == "pl") {
+              PreviousLang = S_TTS_LANG;
+              S_TTS_LANG =  orderText.substring(0,2);
             }
-            TempVolume=orderText.substring(0, 2);
-            i2s.setVolume(("0." + TempVolume).toFloat());
-            //Serial.println("New volume -- " + String(i2s.getVolume()));
-          }  else if(orderText.substring(0,2) == "en" or orderText.substring(0,2) == "pl") {
-            PreviousLang = S_TTS_LANG;
-            S_TTS_LANG =  orderText.substring(0,2);
+            //Serial.println("Prefix -- " + orderText.substring(0, 2));
+            orderText =  orderText.substring(3);
           }
-          //Serial.println("Prefix -- " + orderText.substring(0, 2));
-          orderText =  orderText.substring(3);
-        }
 
-        if(orderTyp == "mp3"){
-          //Serial.println("Loop Sound started -- " + orderText);
-          SD.begin(chipSelect);
-          audioFile = SD.open(orderText);
-          if(audioFile){
+          if(orderTyp == "mp3"){
+            //Serial.println("Loop Sound started -- " + orderText);
+            SD.begin(chipSelect);
+            audioFile = SD.open(orderText);
+            if(audioFile){
+              decoder.begin();
+              copier.begin(decoder, audioFile);
+              copier.copy();
+            } else {
+              mqttClient.publish((S_MQTT_HOUSE+ "/error").c_str(),(S_HOST_NAME + " / " + orderText +  " - does not exist" ).c_str());
+              //Serial.println("File open failed -- " + orderText );
+            }
+          } else if (orderTyp == "ttm") {
+
+            TTM_Worker_Google( orderText);
+
+          } else if (orderTyp == "tts") {
+            //Serial.println("TTS " + orderText);
+            const char* url_str = tts(orderText.c_str(), S_TTS_LANG.c_str(), S_TTS_SPEED.c_str());
+            // generate mp3 with the help of google tts
             decoder.begin();
-            copier.begin(decoder, audioFile);
-            copier.copy();
-          } else {
-            mqttClient.publish((S_MQTT_HOUSE+ "/error").c_str(),(S_HOST_NAME + " / " + orderText +  " - does not exist" ).c_str());
-            //Serial.println("File open failed -- " + orderText );
+            if(!url.begin(url_str ,"audio/mp3")){
+              mqttClient.publish((S_MQTT_HOUSE+ "/error").c_str(),(S_HOST_NAME + " / " + url_str +  " - no response" ).c_str());            
+            } else {
+              //Serial.println("TTS Url: " + String(url_str));
+              copier.begin(decoder, url);
+              copier.copyAll();
+            }
           }
-        } else if (orderTyp == "ttm") {
-
-          TTM_Worker_Google( orderText);
-
-        } else if (orderTyp == "tts") {
-          //Serial.println("TTS " + orderText);
-          const char* url_str = tts(orderText.c_str(), S_TTS_LANG.c_str(), S_TTS_SPEED.c_str());
-          // generate mp3 with the help of google tts
-          decoder.begin();
-          if(!url.begin(url_str ,"audio/mp3")){
-            mqttClient.publish((S_MQTT_HOUSE+ "/error").c_str(),(S_HOST_NAME + " / " + url_str +  " - no response" ).c_str());            
-          } else {
-            //Serial.println("TTS Url: " + String(url_str));
-            copier.begin(decoder, url);
-            copier.copyAll();
-          }
-        }
+      }
     }
   }
 }
