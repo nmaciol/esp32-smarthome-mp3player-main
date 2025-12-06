@@ -309,7 +309,8 @@ void setup(){
 
   //  For development
   //--------------------
-  //AudioToolsLogger.begin(Serial, AudioToolsLogLevel::Info);  
+  AudioToolsLogger.begin(Serial, AudioToolsLogLevel::Error);  
+  // Statt Info geht; Debug, Info, Warning, Error
 
   // setup audiokit before SD!
   // setup output

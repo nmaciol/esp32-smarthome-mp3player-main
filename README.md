@@ -6,7 +6,8 @@ The aim of this project is to develop an MP3 , TTS and Live Stream player that c
 
 - TTS (TextToSpeech): Google TTS free API (no registration needed)
 - Playing MP3 audio are working offline, online connection needed for first tims use TTS and for long TTS Masseges
-- Live Stream: Supports playback from online radio livestreams.- MQTT for Triggering ESP actions
+- Live Stream: Supports playback from online radio livestreams.
+- MQTT for Triggering ESP actions
 - FTP-Server use for one connection for upload of MP3-Files and setup of App.ini
 - Queue for sequential playback of TTS and MP3 jobs and to avoid message overlap
 
