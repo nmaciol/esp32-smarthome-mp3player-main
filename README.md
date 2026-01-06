@@ -64,22 +64,26 @@ The aim of this project is to develop an MP3 , TTS and Live Stream player that c
 | [host-name]/tts     | gong-q/tts    | Hallo Mp3-Player |                                          |
 | [host-name]/ttm     | gong-q/ttm    | Hallo Mp3-Player | The audio file is cached as an MP3 file. |
 | [host-name]/ttm     | gong-q/delttm    | Hallo Mp3-Player | The audio file has been deleted from the cache. |
-| [host-name]/ttm     | gong-q/ls    | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream|
+| [host-name]/ttm     | gong-q/ls/mp3    | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream,  Radio player|
 | [host-name]/stop    | gong-q/stop   | .                |                                          |
-| [host-name]/volume  | gong-q/volume | 0.8              | max. Value 1                             |
+| [host-name]/setVol  | gong-q/setVol | 0.80             | max. Value 1 .00    Set the player volume                        |
+| [host-name]/incVol  | gong-q/incVol | 0.05              | max. Value 1.00    Increase or decrease volume   |
+| [host-name]/incVol  | gong-q/resVol |                | Set the default volume.    |
 | [host-name]/reboot  | gong-q/reboot | .                |                                          |
 | [host-name]/speed   | gong-q/speed  | .                | Applies only to TTS and new TTM files    |
 | [mqtt-house]/mp3    | gong/mp3      | /mp3/gong-a.mp3  | Play all players from the group [mqtt-house]   |
 | [mqtt-house]/tts    | gong/tts      | Hallo            |                                          |
 | [mqtt-house]/tts    | gong/tts      | 80!Hallo         | at 80% volume, Hallo                                         |
 | [mqtt-house]/ttm    | gong/ttm      | Hallo            | The audio file is cached as an MP3 file. |
-| [host-name]/ttm     | gong/ls    | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream|
+| [mqtt-house]/ttm     | gong/ls    | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream|
 | [mqtt-house]/stop   | gong/stop     | .                |                                          |
-| [mqtt-house]/volume | gong/volume   | 0.8              |                                          |
+| [mqtt-house]/setVol  | gong-q/setVol | 0.80             | max. Value 1 .00    Set the player volume                        |
+| [mqtt-house]/incVol  | gong-q/incVol | 0.05              | max. Value 1.00    Increase or decrease volume   |
+| [mqtt-house]/incVol  | gong-q/resVol |                | Set the default volume.    |
 
 ## MQTT Topics from the Player for Smart Home:
 
-| Topic            | Value | Topic: Publish Player                              | Description               |
+| Topic  Smart Home          | Value | Topic: Publish Player                              | Description               |
 | :--------------- | :---- | --------------------------------------------- | ------------------------- |
 | [host-name]/ping| .     | [mqtt-house]/version und [mqtt-house]/FreeHeap | To get Version und FreeHeap  |
 | | .     | [mqtt-house]/error  |   In case of an internal error|
