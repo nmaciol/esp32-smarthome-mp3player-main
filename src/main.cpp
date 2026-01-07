@@ -5,14 +5,13 @@
  * https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-tts/streams-google-audiokit/streams-google-audiokit.ino
  *
  */
-
-#include <SD.h>
-#include "AudioTools.h"
-#include "AudioTools/Disk/AudioSourceSD.h"
-#include "AudioTools/AudioLibs/AudioBoardStream.h"
-#include "AudioTools/AudioCodecs/CodecMP3Helix.h"
-#include "AudioTools/Communication/AudioHttp.h"
 #include <WiFi.h>
+#include <SD.h>
+#include <AudioTools.h>
+#include <AudioTools/Disk/AudioSourceSD.h>
+#include <AudioTools/AudioLibs/AudioBoardStream.h>
+#include <AudioTools/AudioCodecs/CodecMP3Helix.h>
+#include <AudioTools/Communication/AudioHttp.h>
 #include <SimpleFTPServer.h>
 
 
@@ -35,7 +34,7 @@
   0.2.0 Add Live Stream  code optimization
 
 */
-#define FIRMWARE_VERSION "0.2.1"
+#define FIRMWARE_VERSION "0.2.2"
 
 int chipSelect = PIN_AUDIO_KIT_SD_CARD_CS;
 
@@ -379,7 +378,7 @@ void mqttReconnect()
 // Setuo  i2s, Wifi, MQTT, FTP
 void setup()
 {
-
+  
   Serial.begin(115200); // <--------------- do not comment out
   pinMode(errorLED, OUTPUT);
 
@@ -425,7 +424,7 @@ void setup()
   WiFi.mode(WIFI_STA);
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
   WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
-  WiFi.begin(S_WIFI_SSID, S_WIFI_PASSWORD);
+  WiFi.begin(S_WIFI_SSID.c_str(), S_WIFI_PASSWORD.c_str());
 
   while (WiFi.status() != WL_CONNECTED)
   {
