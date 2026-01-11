@@ -64,7 +64,7 @@ The aim of this project is to develop an MP3 , TTS and Live Stream player that c
 | [host-name]/tts     | gong-q/tts    | Hallo Mp3-Player |                                          |
 | [host-name]/ttm     | gong-q/ttm    | Hallo Mp3-Player | The audio file is cached as an MP3 file. |
 | [host-name]/ttm     | gong-q/delttm    | Hallo Mp3-Player | The audio file has been deleted from the cache. |
-| [host-name]/ttm     | gong-q/ls/mp3    | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream,  Radio player|
+| [host-name]/ls/mp3    | gong-q/ls/mp3    | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream,  Radio player|
 | [host-name]/stop    | gong-q/stop   | .                |                                          |
 | [host-name]/setVol  | gong-q/setVol | 0.80             | max. Value 1 .00    Set the player volume                        |
 | [host-name]/incVol  | gong-q/incVol | 0.05              | max. Value 1.00    Increase or decrease volume   |
@@ -75,7 +75,7 @@ The aim of this project is to develop an MP3 , TTS and Live Stream player that c
 | [mqtt-house]/tts    | gong/tts      | Hallo            |                                          |
 | [mqtt-house]/tts    | gong/tts      | 80!Hallo         | at 80% volume, Hallo                                         |
 | [mqtt-house]/ttm    | gong/ttm      | Hallo            | The audio file is cached as an MP3 file. |
-| [mqtt-house]/ttm     | gong/ls    | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream|
+| [mqtt-house]/ls/mp3     | gong/ls/mp3      | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream|
 | [mqtt-house]/stop   | gong/stop     | .                |                                          |
 | [mqtt-house]/setVol  | gong-q/setVol | 0.80             | max. Value 1 .00    Set the player volume                        |
 | [mqtt-house]/incVol  | gong-q/incVol | 0.05              | max. Value 1.00    Increase or decrease volume   |

@@ -15,7 +15,8 @@
 #include <SimpleFTPServer.h>
 
 
-
+//  Fix SD card access issue in FTP server
+//  ----------------------------------------
 // !!!!! Overwrite value in  .pio\libdeps\esp32dev\SimpleFTPServer\FtpServerKey.h
 /// Line 63 #define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_SD
 
@@ -302,9 +303,10 @@ void mqttCallback(char *topic, byte *message, unsigned int length)
     // Serial.println("Connection test Ping");
     mqttClient.publish((S_HOST_NAME + "/FreeHeap").c_str(), (String(buffer)).c_str(), 24);
     mqttClient.publish((S_HOST_NAME + "/version").c_str(), FIRMWARE_VERSION, 24);
-    number = i2s.getVolume();
-    sprintf(buffer, "%u", number);
-    mqttClient.publish((S_HOST_NAME + "/currVol").c_str(), (String(buffer)).c_str(), 24);
+  
+
+    mqttClient.publish((S_HOST_NAME + "/currVol").c_str(), (String(i2s.getVolume())).c_str(), 24);
+    mqttClient.publish((S_HOST_NAME + "/IP").c_str(),  (WiFi.localIP().toString()).c_str());
   }
   else if (String(topic) == S_HOST_NAME + "/reboot")
   {
@@ -458,6 +460,7 @@ void setup()
   Serial.println(" WiFi SSID  : " + S_WIFI_SSID);
   Serial.println(" FTP  user  : " + S_FTP_SVR_USER);
   Serial.println(" MQTT SRV   : " + S_MQTT_SERVER);
+  Serial.println(" Volume     : " + String(i2s.getVolume()));
   Serial.println(" ");
   Serial.println(" IP         : " + WiFi.localIP().toString());
   Serial.println(" ");
