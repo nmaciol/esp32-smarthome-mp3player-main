@@ -307,6 +307,26 @@ void mqttCallback(char *topic, byte *message, unsigned int length)
 
     mqttClient.publish((S_HOST_NAME + "/currVol").c_str(), (String(i2s.getVolume())).c_str(), 24);
     mqttClient.publish((S_HOST_NAME + "/IP").c_str(),  (WiFi.localIP().toString()).c_str());
+
+    // Sleep Mode
+    wifi_ps_type_t ps;
+    esp_wifi_get_ps(&ps);
+    if (ps == WIFI_PS_MIN_MODEM)
+    {
+      mqttClient.publish((S_HOST_NAME + "/sleepMode").c_str(), "MIN_MODEM");
+    }
+    else if (ps == WIFI_PS_MAX_MODEM)
+    {
+      mqttClient.publish((S_HOST_NAME + "/sleepMode").c_str(), "MAX_MODEM");
+    }
+    else
+    {
+      mqttClient.publish((S_HOST_NAME + "/sleepMode").c_str(), "NONE");
+    }
+
+    // WiFi RSSI
+    mqttClient.publish((S_HOST_NAME + "/rssi").c_str(), (String(WiFi.RSSI())).c_str());
+
   }
   else if (String(topic) == S_HOST_NAME + "/reboot")
   {
@@ -315,10 +335,21 @@ void mqttCallback(char *topic, byte *message, unsigned int length)
     decoder.end();
     ESP.restart();
   }
-  else
+  else if (String(topic) == S_HOST_NAME + "/lpm")  // Low Power Mode
   {
-    // Serial.println("Not playing");
-  }
+    if(messageTemp=="on"){
+      Serial.print("WiFi set sleep mode ON");
+      delay(100);
+      //WiFi.setSleep(true); 
+      esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+      delay(100);
+      //queueOrder.push("ttm20!Low Power Mode on");
+    } else {
+      WiFi.setSleep(false);
+    }
+    
+  } 
+
 }
 
 // MQTT reconnect
@@ -346,6 +377,7 @@ void mqttReconnect()
       mqttClient.subscribe((S_HOST_NAME + "/speed").c_str());
       mqttClient.subscribe((S_HOST_NAME + "/ls/aac").c_str());
       mqttClient.subscribe((S_HOST_NAME + "/ls/mp3").c_str());
+      mqttClient.subscribe((S_HOST_NAME + "/lpm").c_str());  // Low Power Mode
 
       // House
       mqttClient.subscribe((S_MQTT_HOUSE + "/tts").c_str());
@@ -463,6 +495,7 @@ void setup()
   Serial.println(" Volume     : " + String(i2s.getVolume()));
   Serial.println(" ");
   Serial.println(" IP         : " + WiFi.localIP().toString());
+  Serial.println(" RSSI       : " + String(WiFi.RSSI()) + " dBm");
   Serial.println(" ");
 }
 

@@ -11,6 +11,7 @@ The aim of this project is to develop an MP3 , TTS and Live Stream player that c
 - FTP-Server use for one connection for upload of MP3-Files and setup of App.ini
 - Queue for sequential playback of TTS and MP3 jobs and to avoid message overlap
 
+
 * **Volume Control: Adjust playback volume using a message prefix.**
   The text for the TTS output can include a prefix (e.g., ​**80!Water in the basement**​) that overrides the current player volume.
   This allows important or urgent messages to be played loudly, regardless of the user’s current volume settings — for example: **Water in the basement!**
@@ -21,6 +22,7 @@ The aim of this project is to develop an MP3 , TTS and Live Stream player that c
 
 - ESP32-Audio-Kit ESP32-A1S 4 MB oder 8 MB for 15-17€ on Aliexpress.
 - ![1763652821688|](images/README/1763652821688.png )
+- In Low Power Mode, the player consumes 0.5 watts
 
 # SW Installation & Customizing
 
@@ -77,6 +79,7 @@ The aim of this project is to develop an MP3 , TTS and Live Stream player that c
 | [mqtt-house]/ttm    | gong/ttm      | Hallo            | The audio file is cached as an MP3 file. |
 | [mqtt-house]/ls/mp3     | gong/ls/mp3      | http://stream.srg-ssr.ch/m/rsj/mp3_128  | Livestream|
 | [mqtt-house]/stop   | gong/stop     | .                |                                          |
+| [mqtt-house]/stop   | gong/lpm     | on                | Low Power Mode                                         |
 | [mqtt-house]/setVol  | gong-q/setVol | 0.80             | max. Value 1 .00    Set the player volume                        |
 | [mqtt-house]/incVol  | gong-q/incVol | 0.05              | max. Value 1.00    Increase or decrease volume   |
 | [mqtt-house]/incVol  | gong-q/resVol |                | Set the default volume.    |
