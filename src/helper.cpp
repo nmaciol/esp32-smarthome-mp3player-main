@@ -121,7 +121,7 @@ bool setGlobalVar(){
           Serial.println(buffer);
           S_MQTT_PASSWORD = buffer;
         }
-        if (ini.getValue("mqtt", "mqtt-house", buffer, bufferLen)) {
+        if (ini.getValue("mqtt", "house", buffer, bufferLen)) {
           Serial.print("section 'mqtt' has an entry 'House' with value ");
           Serial.println(buffer);
           S_MQTT_HOUSE = buffer;

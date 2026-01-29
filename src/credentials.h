@@ -18,7 +18,7 @@
 #define MQTT_PORT "188"
 #define MQTT_USER "***"
 #define MQTT_PASSWORD "***"
-#define MQTT_HOUSE "gong"
+#define MQTT_HOUSE "***"
 
 
 #define TTS_QRY_GOOGLE "http://translate.google.com/translate_tts?ie=UTF-8&tl=%1&client=tw-ob&ttsspeed=%2&q=%3"
